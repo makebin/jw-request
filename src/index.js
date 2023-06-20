@@ -128,3 +128,4 @@ MinRequest.install = function (Vue) {
 }
 
 export default MinRequest
+
