@@ -1,0 +1,19 @@
+{
+  "name": "jw-request",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "bin",
+  "license": "MIT",
+  "keywords": [
+    "uni components",
+    "cascader",
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/makebin/jw-request"
+  }
+}
