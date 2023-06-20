@@ -2,130 +2,180 @@ const config = Symbol('config')
 const isCompleteURL = Symbol('isCompleteURL')
 const requestBefore = Symbol('requestBefore')
 const requestAfter = Symbol('requestAfter')
-import {
-  checkLogin,
-  checkResult
-} from '@/utils/checkResponse'
+// import {
+//   checkLogin,
+//   checkResult
+// } from '@/utils/checkResponse'
 
-class MinRequest {
-  [config] = {
-    baseURL: '',
-    header: {
-      // 'content-type': 'application/x-www-form-urlencoded'
-      'Content-Type': 'application/json;charset=UTF-8'
-    },
-    method: 'GET',
-    dataType: 'json',
-    responseType: 'text'
-  }
+const checkResult = () => {}
+class jwRequest {
+	[config] = {
+		baseURL: '',
+		header: {
+			'Content-Type': 'application/json;charset=UTF-8'
+		},
+		// 返回当前请求的task, options。请勿在此处修改options。非必填
+		taskHook: undefined,
+		method: 'GET',
+		dataType: 'json',
+		responseType: 'text',
+		// #ifdef H5 || APP-PLUS || MP-ALIPAY || MP-WEIXIN
+		timeout: 60000, // H5(HBuilderX 2.9.9+)、APP(HBuilderX 2.9.9+)、微信小程序（2.10.0）、支付宝小程序
+		// #endif
+		notification: ({
+			msg
+		}) => {
+			uni.showToast({
+				title: msg,
+				icon: 'none'
+			})
+		},
+		afterResponseFormat: ({
+			code
+		}) => {
+			return code === 200;
+		}
 
-  interceptors = {
-    request: (func) => {
-      if (func) {
-        MinRequest[requestBefore] = func
-      } else {
-        MinRequest[requestBefore] = (request) => request
-      }
+	}
+	// 参数配置初始化
+	constructor(options) {
+		Object.assign(this[config], options);
+	}
 
-    },
-    response: (func) => {
-      if (func) {
-        MinRequest[requestAfter] = func
-      } else {
-        MinRequest[requestAfter] = (response) => response
-      }
-    }
-  }
+	interceptors = {
+		request: (func) => {
+			if (func) {
+				jwRequest[requestBefore] = func
+			} else {
+				jwRequest[requestBefore] = (request) => request
+			}
 
-  static [requestBefore](config) {
-    return config
-  }
+		},
+		response: (func) => {
+			if (func) {
+				jwRequest[requestAfter] = func
+			} else {
+				jwRequest[requestAfter] = (response) => response
+			}
+		}
+	}
 
-  static [requestAfter](response) {
-    return response
-  }
+	static[requestBefore](config) {
+		return config
+	}
 
-  static [isCompleteURL](url) {
-    return /(http|https):\/\/([\w.]+\/?)\S*/.test(url)
-  }
+	static[requestAfter](response) {
+		return response
+	}
 
-  setConfig(func) {
-    this[config] = func(this[config])
-  }
+	static[isCompleteURL](url) {
+		return /(http|https):\/\/([\w.]+\/?)\S*/.test(url)
+	}
 
-  request(options = {}) {
-    options.baseURL = options.baseURL || this[config].baseURL
-    options.dataType = options.dataType || this[config].dataType
-    options.url = MinRequest[isCompleteURL](options.url) ? options.url : (options.baseURL + options.url)
-    options.data = options.data
-    options.header = {
-      ...this[config].header,
-      ...options.header
-    }
-    options.method = options.method || this[config].method
+	setConfig(func) {
+		this[config] = func(this[config])
+	}
 
-    options = {
-      ...options,
-      ...MinRequest[requestBefore](options)
-    }
-    return new Promise((resolve, reject) => {
-      options.success = function (res) {
-        resolve(MinRequest[requestAfter](res, options))
-      }
-      options.fail = function (err) {
-        reject(MinRequest[requestAfter](err, options))
-      }
-      uni.request(options)
-    })
-  }
+	request(options = {}) {
+		// #ifdef H5 || APP-PLUS || MP-ALIPAY || MP-WEIXIN
+		// timeout: 60000, // H5(HBuilderX 2.9.9+)、APP(HBuilderX 2.9.9+)、微信小程序（2.10.0）、支付宝小程序
+		options.timeout = options.timeout || this[config].timeout;
+		// #endif
+		options.baseURL = options.baseURL || this[config].baseURL
+		options.dataType = options.dataType || this[config].dataType
+		options.url = jwRequest[isCompleteURL](options.url) ? options.url : (options.baseURL + options.url)
+		options.data = options.data
+		options.header = {
+			...this[config].header,
+			...options.header
+		}
+		options.method = options.method || this[config].method
+		options.taskHook = options.taskHook || this[config].taskHook;
+		options = {
+			...options,
+			...jwRequest[requestBefore](options)
+		}
 
-  get(url, data, options = {}) {
-    options.url = url
-    options.data = data
-    options.method = 'GET'
-    return this.request(options).then(checkLogin).then(checkResult)
-  }
+		return new Promise((resolve, reject) => {
+			options.success = function(res) {
+				resolve(jwRequest[requestAfter](res, options))
+			}
+			options.fail = function(err) {
+				reject(jwRequest[requestAfter](err, options))
+			}
+			const requestTask = uni.request(options)
+			// 请求人物钩子处理
+			typeof options.taskHook === 'function' && options.taskHook(requestTask, options);
+		})
+	}
 
-  post(url, data, options = {}) {
-    options.url = url
-    options.data = data
-    options.method = 'POST'
-    return this.request(options).then(checkLogin).then(checkResult)
-  }
+	/**
+	 * 
+	 */
+	get(url, data, options = {}) {
+		options.url = url
+		options.data = data
+		options.method = 'GET'
+		return this._request(options);
+	}
 
-  put(url, data, options = {}) {
-    options.url = url
-    options.data = data
-    options.method = 'PUT'
-    return this.request(options).then(checkLogin).then(checkResult)
-  }
+	/**
+	 * 
+	 */
+	post(url, data, options = {}) {
+		options.url = url
+		options.data = data
+		options.method = 'POST'
+		return this._request(options);
+	}
 
-  delete(url, data, options = {}) {
-    options.url = url
-    options.data = data
-    options.method = 'DELETE'
-    return this.request(options).then(checkLogin).then(checkResult)
-  }
+	/**
+	 * 
+	 */
+	put(url, data, options = {}) {
+		options.url = url
+		options.data = data
+		options.method = 'PUT'
+		return this._request(options);
+	}
+
+	/**
+	 * 
+	 */
+	delete(url, data, options = {}) {
+		options.url = url
+		options.data = data
+		options.method = 'DELETE'
+		return this._request(options);
+	}
+
+	/**
+	 * @param {Object} options
+	 */
+	_request(options) {
+		const afterResponse = (result) => {
+			if (true === this[config].afterResponseFormat(result.data)) {
+				result.ok = function() {
+					return true
+				}
+			} else {
+				result.ok = function() {
+					return false
+				}
+				this[config].notification(result);
+			}
+			return result
+		}
+		return this.request(options).then(afterResponse)
+	}
 
 
 
 
 }
 
-MinRequest.install = function (Vue) {
-  Vue.mixin({
-    beforeCreate: function () {
-      if (this.$options.minApi) {
-        Vue._minApi = this.$options.minApi
-      }
-    }
-  })
-  Object.defineProperty(Vue.prototype, '$minApi', {
-    get: function () {
-      return Vue._minApi.apis
-    }
-  })
+jwRequest.install = function(Vue) {
+
 }
 
-export default MinRequest
-
+export default jwRequest
