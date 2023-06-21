@@ -9,8 +9,9 @@
   "author": "bin",
   "license": "MIT",
   "keywords": [
-    "uni components",
-    "cascader",
+    "uni",
+    "request",
+    "curl"
   ],
   "repository": {
     "type": "git",
