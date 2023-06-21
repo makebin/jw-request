@@ -2,12 +2,6 @@ const config = Symbol('config')
 const isCompleteURL = Symbol('isCompleteURL')
 const requestBefore = Symbol('requestBefore')
 const requestAfter = Symbol('requestAfter')
-// import {
-//   checkLogin,
-//   checkResult
-// } from '@/utils/checkResponse'
-
-const checkResult = () => {}
 class jwRequest {
 	[config] = {
 		baseURL: '',
@@ -60,15 +54,15 @@ class jwRequest {
 		}
 	}
 
-	static[requestBefore](config) {
+	static [requestBefore](config) {
 		return config
 	}
 
-	static[requestAfter](response) {
+	static [requestAfter](response) {
 		return response
 	}
 
-	static[isCompleteURL](url) {
+	static [isCompleteURL](url) {
 		return /(http|https):\/\/([\w.]+\/?)\S*/.test(url)
 	}
 
@@ -97,10 +91,10 @@ class jwRequest {
 		}
 
 		return new Promise((resolve, reject) => {
-			options.success = function(res) {
+			options.success = function (res) {
 				resolve(jwRequest[requestAfter](res, options))
 			}
-			options.fail = function(err) {
+			options.fail = function (err) {
 				reject(jwRequest[requestAfter](err, options))
 			}
 			const requestTask = uni.request(options)
@@ -155,11 +149,11 @@ class jwRequest {
 	_request(options) {
 		const afterResponse = (result) => {
 			if (true === this[config].afterResponseFormat(result.data)) {
-				result.ok = function() {
+				result.ok = function () {
 					return true
 				}
 			} else {
-				result.ok = function() {
+				result.ok = function () {
 					return false
 				}
 				this[config].notification(result);
@@ -174,7 +168,7 @@ class jwRequest {
 
 }
 
-jwRequest.install = function(Vue) {
+jwRequest.install = function (Vue) {
 
 }
 
